@@ -51,7 +51,7 @@ SQS_DEFINITION = {
     "MaximumMessageSize": "262144",
     "MessageRetentionPeriod": "1209600",
     "ReceiveMessageWaitTimeSeconds": "0",
-    "RedrivePolicy": "{\"deadLetterTargetArn\":\"" + SQS_DEAD_LETTER_QUEUE + "\",\"maxReceiveCount\":\"10\"}",
+#    "RedrivePolicy": "{\"deadLetterTargetArn\":\"" + SQS_DEAD_LETTER_QUEUE + "\",\"maxReceiveCount\":\"10\"}",
     "VisibilityTimeout": str(SQS_MESSAGE_VISIBILITY)
 }
 
@@ -68,7 +68,12 @@ def get_aws_credentials(AWS_PROFILE):
 def generate_task_definition(AWS_PROFILE):
     task_definition = TASK_DEFINITION.copy()
     key, secret = get_aws_credentials(AWS_PROFILE)
-    sqs = boto3.client('sqs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    sqs = boto3.client('sqs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     queue_name = get_queue_url(sqs)
     task_definition['containerDefinitions'][0]['environment'] += [
         {
@@ -240,7 +245,12 @@ def generateUserData(ecsConfigFile,dockerBaseSize):
         return b64encode(pre_user_data_string.encode('utf-8')).decode('utf-8')
 
 def removequeue(queueName):
-    sqs = boto3.client('sqs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    sqs = boto3.client('sqs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     queueoutput= sqs.list_queues(QueueNamePrefix=queueName)
     if len(queueoutput["QueueUrls"])==1:
         queueUrl=queueoutput["QueueUrls"][0]
@@ -296,7 +306,12 @@ def export_logs(logs, loggroupId, starttime, bucketId):
 class JobQueue():
 
     def __init__(self,name=None):
-        self.sqs = boto3.resource('sqs')
+        access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+        self.sqs = boto3.resource('sqs',
+                        aws_access_key_id=access_key, 
+                        aws_secret_access_key=secret_key, 
+                        region_name=AWS_REGION,
+                        )
         if name==None:
             self.queue = self.sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
         else:
@@ -340,9 +355,18 @@ def setup():
     USER = os.environ['HOME'].split('/')[-1]
     AWS_CONFIG_FILE_NAME = os.environ['HOME'] + '/.aws/config'
     AWS_CREDENTIAL_FILE_NAME = os.environ['HOME'] + '/.aws/credentials'
-    sqs = boto3.client('sqs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    sqs = boto3.client('sqs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     get_or_create_queue(sqs)
-    ecs = boto3.client('ecs')
+    ecs = boto3.client('ecs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     get_or_create_cluster(ecs)
     update_ecs_task_definition(ecs, ECS_TASK_NAME, AWS_PROFILE)
     create_or_update_ecs_service(ecs, ECS_SERVICE_NAME, ECS_TASK_NAME)
@@ -392,7 +416,12 @@ def startCluster():
 
     thistime = datetime.datetime.now().replace(microsecond=0)
     #Step 1: set up the configuration files
-    s3client = boto3.client('s3')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    s3client = boto3.client('s3',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     ecsConfigFile=generateECSconfig(ECS_CLUSTER,APP_NAME,AWS_BUCKET,s3client)
     spotfleetConfig=loadConfig(sys.argv[2])
     spotfleetConfig['ValidFrom']=thistime
@@ -408,7 +437,12 @@ def startCluster():
 
 
     # Step 2: make the spot fleet request
-    ec2client=boto3.client('ec2')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    ec2client = boto3.client('ec2',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     requestInfo = ec2client.request_spot_fleet(SpotFleetRequestConfig=spotfleetConfig)
     print('Request in process. Wait until your machines are available in the cluster.')
     print('SpotFleetRequestId',requestInfo['SpotFleetRequestId'])
@@ -426,7 +460,12 @@ def startCluster():
     createMonitor.close()
     
     # Step 4: Create a log group for this app and date if one does not already exist
-    logclient=boto3.client('logs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    logclient = boto3.client('logs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     loggroupinfo=logclient.describe_log_groups(logGroupNamePrefix=LOG_GROUP_NAME)
     groupnames=[d['logGroupName'] for d in loggroupinfo['logGroups']]
     if LOG_GROUP_NAME not in groupnames:
@@ -438,7 +477,12 @@ def startCluster():
     
     # Step 5: update the ECS service to be ready to inject docker containers in EC2 instances
     print('Updating service')
-    ecs = boto3.client('ecs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    ecs = boto3.client('ecs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     ecs.update_service(cluster=ECS_CLUSTER, service=APP_NAME+'Service', desiredCount=CLUSTER_MACHINES*TASKS_PER_MACHINE)
     print('Service updated.') 
     
@@ -491,8 +535,18 @@ def monitor(cheapest=False):
     fleetId=monitorInfo["MONITOR_FLEET_ID"]
     queueId=monitorInfo["MONITOR_QUEUE_NAME"]
 
-    ec2 = boto3.client('ec2')
-    cloud = boto3.client('cloudwatch') 
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    ec2 = boto3.client('ec2',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    cloud = boto3.client('cloudwatch',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
 
     # Optional Step 0 - decide if you're going to be cheap rather than fast. This means that you'll get 15 minutes
     # from the start of the monitor to get as many machines as you get, and then it will set the requested number to 1.
@@ -536,7 +590,13 @@ def monitor(cheapest=False):
     loggroupId=monitorInfo["MONITOR_LOG_GROUP_NAME"]
     starttime=monitorInfo["MONITOR_START_TIME"]    
 
-    ecs = boto3.client('ecs')
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    ecs = boto3.client('ecs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
+
     ecs.update_service(cluster=monitorcluster, service=monitorapp+'Service', desiredCount=0)
     print('Service has been downscaled')
 
@@ -574,8 +634,12 @@ def monitor(cheapest=False):
     removeClusterIfUnused(monitorcluster, ecs)
 
     #Step 6: Export the logs to S3
-    logs=boto3.client('logs')
-
+    access_key, secret_key = get_aws_credentials(AWS_PROFILE=AWS_PROFILE)
+    logs = boto3.client('logs',
+                      aws_access_key_id=access_key, 
+                      aws_secret_access_key=secret_key, 
+                      region_name=AWS_REGION,
+                      )
     print('Transfer of CellProfiler logs to S3 initiated')
     export_logs(logs, loggroupId, starttime, bucketId)
 

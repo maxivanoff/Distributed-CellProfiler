@@ -1,27 +1,27 @@
 # Constants (User configurable)
 
-APP_NAME = 'DistributedCP'                # Used to generate derivative names unique to the application.
+APP_NAME = 'DistributedCPApp'                # Used to generate derivative names unique to the application.
 
 # DOCKER REGISTRY INFORMATION:
 DOCKERHUB_TAG = 'cellprofiler/distributed-cellprofiler:2.0.0_4.1.3'
 
 # AWS GENERAL SETTINGS:
-AWS_REGION = 'us-east-1'
-AWS_PROFILE = 'default'                 # The same profile used by your AWS CLI installation
-SSH_KEY_NAME = 'your-key-file.pem'      # Expected to be in ~/.ssh
-AWS_BUCKET = 'your-bucket-name'
+AWS_REGION = 'us-west-2'
+AWS_PROFILE = 'cellprofiler_user'                 # The same profile used by your AWS CLI installation
+SSH_KEY_NAME = 'my-key-pair.pem'      # Expected to be in ~/.ssh
+AWS_BUCKET = 'cellprofiler-sandbox'
 
 # EC2 AND ECS INFORMATION:
-ECS_CLUSTER = 'default'
-CLUSTER_MACHINES = 3
+ECS_CLUSTER = 'DistributedCPCluster'
+CLUSTER_MACHINES = 1
 TASKS_PER_MACHINE = 1
 MACHINE_TYPE = ['m4.xlarge']
-MACHINE_PRICE = 0.10
+MACHINE_PRICE = 0.5
 EBS_VOL_SIZE = 30                       # In GB.  Minimum allowed is 22.
 DOWNLOAD_FILES = 'False'
 
 # DOCKER INSTANCE RUNNING ENVIRONMENT:
-DOCKER_CORES = 4                        # Number of CellProfiler processes to run inside a docker container
+DOCKER_CORES = 1                        # Number of CellProfiler processes to run inside a docker container
 CPU_SHARES = DOCKER_CORES * 1024        # ECS computing units assigned to each docker container (1024 units = 1 core)
 MEMORY = 15000                           # Memory assigned to the docker container in MB
 SECONDS_TO_START = 3*60                 # Wait before the next CP process is initiated to avoid memory collisions
